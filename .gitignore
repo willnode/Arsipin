@@ -1,0 +1,6 @@
+__pycache__
+.vscode
+indexed
+sample
+temp
+mainDB.sqlite
