@@ -1,4 +1,5 @@
 from PyQt5.QtSql import QSqlQuery
+from PyQt5.QtWidgets import QDateEdit, QItemDelegate
 from pathlib import Path
 import subprocess, os
 from datetime import datetime
@@ -21,16 +22,19 @@ def getModifiedDate(path):
 def getDocumentPath(id, name): return "%s\\indexed\\documents\\%d-%s" % (os.getcwd(), id, name)
 def getThumbnailPath(id, name): return "%s\\indexed\\thumbs\\%d-%s.jpg" % (os.getcwd(), id, name)
 
-def importDocument(path, title, index, date):
+def importDocument(path, title, index, date, category):
 	name = getFileName(path)
 	# add to SQL
 	q = QSqlQuery()
-	q.prepare("INSERT INTO documents VALUES (NULL, :index, :title, :date, :file)")
-	q.bindValue(":index", index)
-	q.bindValue(":title", title)
+	q.prepare("INSERT INTO documents VALUES (NULL, :index, :title, :date, :file, :category)")
+	q.bindValue(":index", str(index))
+	q.bindValue(":title", str(title))
 	q.bindValue(":date", str(date))
-	q.bindValue(":file", name)
-	q.exec()
+	q.bindValue(":category", str(category))
+	q.bindValue(":file", str(name))
+	if not q.exec():
+		print("FAIL", q.executedQuery(), index, title, date, name)
+		return
 	# Save the file
 	identity = q.lastInsertId()
 	dest = getDocumentPath(identity, name)
@@ -58,3 +62,11 @@ def deleteDocument(identity):
 		q.bindValue(":id", identity)
 		return q.exec()
 
+
+class NonEditableDelegate(QItemDelegate):
+    def editorEvent(self, event, item, option, model): return False
+    def createEditor(self, parent, option, index): return None
+
+class DateEditDelegate(QItemDelegate):
+    def createEditor(self, parent, option, index): return QDateEdit(parent=parent)
+    def updateEditorGeometry(self, editor, option, index): editor.setGeometry(option.rect)

@@ -5,14 +5,6 @@ import sys, utils, os
 from importDialog import ImportDialog
 from datetime import datetime
 
-class NonEditableDelegate(QItemDelegate):
-    def editorEvent(self, event, item, option, model): return False
-    def createEditor(self, parent, option, index): return None
-
-class DateEditDelegate(QItemDelegate):
-    def createEditor(self, parent, option, index): return QtWidgets.QDateEdit(parent=parent)
-    def updateEditorGeometry(self, editor, option, index): editor.setGeometry(option.rect)
-
 class Ui(QtWidgets.QMainWindow):
     def __init__(self):
         self.openDB()
@@ -33,17 +25,6 @@ class Ui(QtWidgets.QMainWindow):
         self.show()
 
 
-    def dragEnterFileEvent(self, e):
-        # if e.mimeData().hasUrls():
-            e.setDropAction(QtCore.Qt.CopyAction)
-            e.accept()
-        # else:
-        #     e.ignore()
-
-    def dropFileEvent(self, e):
-        files = [u.toLocalFile() for u in e.mimeData().urls()]
-        for f in files:
-            print(f)
 
     def openDoc(self, event):
         os.startfile(self.selectedDoc)
@@ -62,9 +43,9 @@ class Ui(QtWidgets.QMainWindow):
             self.model = QSqlTableModel(self)
             self.model.setTable('documents')
             self.listing.setModel(self.model)
-            self.listing.setItemDelegateForColumn(0, NonEditableDelegate(self))
-            self.listing.setItemDelegateForColumn(3, DateEditDelegate(self))
-            self.listing.setItemDelegateForColumn(4, NonEditableDelegate(self))
+            self.listing.setItemDelegateForColumn(0, utils.NonEditableDelegate(self))
+            self.listing.setItemDelegateForColumn(3, utils.DateEditDelegate(self))
+            self.listing.setItemDelegateForColumn(4, utils.NonEditableDelegate(self))
 
         filt = self.searchBox.text()
         self.model.setFilter(None if filt == '' else '`index` LIKE "%%%s%%" OR `title` LIKE "%%%s%%"' % (filt, filt))
@@ -83,7 +64,8 @@ class Ui(QtWidgets.QMainWindow):
             self.boxTitle.setText(selectedTitle)
             self.boxIndex.setText(selectedIndex)
             self.boxDate.setDate(datetime.strptime(selectedDate, '%Y-%m-%d'))
-            self.boxPreview.setPixmap(self.selectedThumb.scaledToWidth(self.boxPreview.width()))
+            self.boxPreview.setPixmap(self.selectedThumb.scaled(
+                self.boxPreview.width(), self.boxPreview.height(), QtCore.Qt.KeepAspectRatio, QtCore.Qt.SmoothTransformation))
 
 
     def deleteAction(self):
@@ -103,11 +85,24 @@ class Ui(QtWidgets.QMainWindow):
                         r = utils.deleteDocument(self.model.data(self.model.index(row.row(), 0)))
                 self.updateListing()
 
-
     def importAction(self):
         ImportDialog(self).exec()
         self.updateListing()
 
+    def dragEnterFileEvent(self, e):
+        if e.mimeData().hasUrls():
+            e.setDropAction(QtCore.Qt.CopyAction)
+            e.accept()
+        else:
+            e.ignore()
+
+    def dropFileEvent(self, e):
+        files = [u.toLocalFile() for u in e.mimeData().urls()]
+        im = ImportDialog(self)
+        for f in files:
+            im.addPath(f)
+        im.exec()
+        self.updateListing()
 
 app = QtWidgets.QApplication(sys.argv)
 window = Ui()
