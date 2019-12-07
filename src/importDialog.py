@@ -16,9 +16,12 @@ class ImportDialog(QtWidgets.QDialog):
         self.listing.selectionModel().selectionChanged.connect(
             lambda _, __: self.updatePreview())
         self.listing.setItemDelegateForColumn(
-            4, utils.NonEditableDelegate(self))
-        self.listing.setItemDelegateForColumn(
             2, utils.DateEditDelegate(self))
+        self.listing.setItemDelegateForColumn(
+            3, utils.CatalogEditDelegate(self))
+        self.listing.setItemDelegateForColumn(
+            4, utils.NonEditableDelegate(self))
+        self.listing.cellChanged.connect(lambda x, y: self.updatePreview())
         self.openBtn.clicked.connect(self.openAction)
         self.openBtn.dragEnterEvent = self.dragEnterFileEvent
         self.openBtn.dropEvent = self.dropFileEvent
@@ -27,6 +30,11 @@ class ImportDialog(QtWidgets.QDialog):
         self.katalogmodel.setTable('catalogs')
         self.katalogmodel.select()
         self.boxCatalog.setModel(self.katalogmodel)
+        self.boxTitle.textChanged.connect(lambda x: self.updateFromBox())
+        self.boxIndex.textChanged.connect(lambda x: self.updateFromBox())
+        self.boxDate.dateChanged.connect(lambda x: self.updateFromBox())
+        self.boxCatalog.currentIndexChanged.connect(
+            lambda x: self.updateFromBox())
 
     def openAction(self):
         filePath = QFileDialog.getOpenFileNames(self, 'OpenFile')[0]
@@ -34,7 +42,6 @@ class ImportDialog(QtWidgets.QDialog):
 
     def addPath(self, filePath):
         self.thumbTicket += 1
-        fileName = utils.getFileName(filePath)
         fileThumb = utils.retrieveTempThumb(
             filePath, "import_%d" % self.thumbTicket)
         date = datetime.strftime(utils.getModifiedDate(filePath), '%Y-%m-%d')
@@ -42,7 +49,7 @@ class ImportDialog(QtWidgets.QDialog):
         index = ""
         category = ""
         items = [index, title, str(date), category,
-                 fileName, filePath, fileThumb]
+                 filePath, fileThumb]
         row = self.listing.rowCount()
         self.listing.insertRow(row)
         for i, item in enumerate(items):
@@ -51,25 +58,25 @@ class ImportDialog(QtWidgets.QDialog):
     def updatePreview(self):
         rows = self.listing.selectedItems()
         if (len(rows) > 0):
-            selectedIndex = self.listing.item(rows[0].row(), 0).text()
-            selectedTitle = self.listing.item(rows[0].row(), 1).text()
-            selectedDate = datetime.strptime(self.listing.item(
-                rows[0].row(), 2).text(), '%Y-%m-%d')
-            selectedThumb = self.listing.item(rows[0].row(), 6).text()
+            datasheet = [self.listing.item(rows[0].row(), x)
+                         .text() for x in range(6)]
+            index, title, date, catalog, path, thumb = datasheet
+            date = datetime.strptime(date, '%Y-%m-%d')
 
-            self.fileLabel.setPixmap(QtGui.QPixmap(selectedThumb))
-            self.boxTitle.setText(selectedTitle)
-            self.boxIndex.setText(selectedIndex)
-            self.boxDate.setDate(selectedDate)
+            self.fileLabel.setPixmap(QtGui.QPixmap(thumb))
+            self.boxTitle.setText(title)
+            self.boxIndex.setText(index)
+            self.boxDate.setDate(date)
+            i = self.boxCatalog.findText(catalog)
+            if i >= 0:
+                self.boxCatalog.setCurrentIndex(i)
 
     def importAction(self):
         for row in range(self.listing.rowCount()):
-            path = self.listing.item(row, 5).text()
-            title = self.listing.item(row, 1).text()
-            index = self.listing.item(row, 0).text()
-            date = self.listing.item(row, 2).text()
-            category = self.listing.item(row, 3).text()
-            utils.importDocument(path, title, index, date, category)
+            datasheet = [self.listing.item(row, x)
+                         .text() for x in range(6)]
+            index, title, date, catalog, path, thumb = datasheet
+            utils.importDocument(path, title, index, date, catalog)
 
     def dragEnterFileEvent(self, e):
         if e.mimeData().hasUrls():
@@ -85,3 +92,16 @@ class ImportDialog(QtWidgets.QDialog):
             im.addPath(f)
         im.exec()
         self.updateListing()
+
+    def updateFromBox(self):
+        rows = self.listing.selectedItems()
+        if (len(rows) > 0):
+            datasheet = [self.listing.item(rows[0].row(), x)
+                         .text() for x in range(6)]
+            datasheet[0] = self.boxIndex.text()
+            datasheet[1] = self.boxTitle.text()
+            datasheet[2] = datetime.strftime(
+                self.boxDate.date().toPyDate(), '%Y-%m-%d')
+            datasheet[3] = self.boxCatalog.currentText()
+            [self.listing.item(rows[0].row(), x)
+                         .setText(datasheet[x]) for x in range(6)]

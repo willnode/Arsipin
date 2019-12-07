@@ -118,12 +118,7 @@
            </column>
            <column>
             <property name="text">
-             <string>Klasifikasi</string>
-            </property>
-           </column>
-           <column>
-            <property name="text">
-             <string>File</string>
+             <string>Katalog</string>
             </property>
            </column>
            <column>

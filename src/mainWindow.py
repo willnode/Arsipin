@@ -15,6 +15,7 @@ class MainWindow(QMainWindow):
         super(MainWindow, self).__init__()
         uic.loadUi('src/mainView.ui', self)
         self.selectedDoc = ''
+        self.mute = False
         self.openDB()
         self.updateListing()
         self.addBtn.clicked.connect(self.importAction)
@@ -29,6 +30,11 @@ class MainWindow(QMainWindow):
         self.boxOpen.clicked.connect(self.openDoc)
         self.boxFrame.resizeEvent = lambda e: self.resizeDock()
         self.searchBox.textChanged.connect(self.updateListing)
+        self.boxTitle.textChanged.connect(lambda x: self.updateFromBox())
+        self.boxIndex.textChanged.connect(lambda x: self.updateFromBox())
+        self.boxDate.dateChanged.connect(lambda x: self.updateFromBox())
+        self.boxCatalog.currentIndexChanged.connect(
+            lambda x: self.updateFromBox())
         self.show()
 
     def openDoc(self):
@@ -49,6 +55,8 @@ class MainWindow(QMainWindow):
             self.model = QSqlTableModel(self)
             self.model.setTable('documents')
             self.listing.setModel(self.model)
+            #QSqlTableModel.dataChanged
+            self.model.dataChanged.connect(lambda x, y: self.updatePreview())
             self.listing.setItemDelegateForColumn(
                 0, utils.NonEditableDelegate(self))
             self.listing.setItemDelegateForColumn(
@@ -74,19 +82,35 @@ class MainWindow(QMainWindow):
             datasheet = [self.model.data(self.model.index(
                 rows[0].row(), x)) for x in range(6)]
             ID, Index, Title, Date, Catalog, File = datasheet
+            self.mute = True
             self.selectedDoc = utils.getDocumentPath(ID, File)
             self.selectedThumb = QPixmap(
                 utils.getThumbnailPath(ID, File))
-            self.boxTitle.setText(Title)
             self.boxIndex.setText(Index)
+            self.boxTitle.setText(Title)
             self.boxDate.setDate(datetime.strptime(Date, '%Y-%m-%d'))
             i = self.boxCatalog.findText(Catalog)
             if i >= 0:
                 self.boxCatalog.setCurrentIndex(i)
-
+            self.mute = False
             self.boxPreview.setPixmap(self.selectedThumb.scaled(
                 self.boxPreview.width(), self.boxPreview.height(),
                 Qt.KeepAspectRatio, Qt.SmoothTransformation))
+
+    def updateFromBox(self):
+        if (self.mute): return
+        rows = self.listing.selectionModel().selectedRows()
+        if (len(rows) == 1):
+            datasheet = [self.model.data(self.model.index(
+                         rows[0].row(), x)) for x in range(6)]
+            datasheet[1] = self.boxIndex.text()
+            datasheet[2] = self.boxTitle.text()
+            datasheet[3] = datetime.strftime(
+                self.boxDate.date().toPyDate(), '%Y-%m-%d')
+            datasheet[4] = self.boxCatalog.currentText()
+            [self.model.setData(
+                self.model.index(rows[0].row(), x),
+                datasheet[x]) for x in range(6)]
 
     def deleteAction(self):
         rows = self.listing.selectionModel().selectedRows()
