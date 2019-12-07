@@ -6,12 +6,12 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>510</width>
+    <width>757</width>
     <height>472</height>
    </rect>
   </property>
   <property name="windowTitle">
-   <string>MainWindow</string>
+   <string>Aplikasi Arsipin - Universitas Trunojoyo Madura</string>
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QVBoxLayout" name="verticalLayout">
@@ -36,6 +36,21 @@
        <enum>QFrame::Raised</enum>
       </property>
       <layout class="QGridLayout" name="gridLayout">
+       <property name="leftMargin">
+        <number>0</number>
+       </property>
+       <property name="topMargin">
+        <number>0</number>
+       </property>
+       <property name="rightMargin">
+        <number>0</number>
+       </property>
+       <property name="bottomMargin">
+        <number>0</number>
+       </property>
+       <property name="horizontalSpacing">
+        <number>6</number>
+       </property>
        <item row="0" column="0">
         <widget class="QPushButton" name="addBtn">
          <property name="text">
@@ -89,7 +104,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>510</width>
+     <width>757</width>
      <height>21</height>
     </rect>
    </property>
@@ -99,8 +114,7 @@
     </property>
     <addaction name="actionTambah"/>
     <addaction name="separator"/>
-    <addaction name="actionReset_DB"/>
-    <addaction name="actionExpor_DB"/>
+    <addaction name="actionKatalog"/>
    </widget>
    <addaction name="menuFile"/>
   </widget>
@@ -178,12 +192,19 @@
          <widget class="QDateEdit" name="boxDate"/>
         </item>
         <item>
-         <widget class="QListView" name="boxTags">
-          <property name="maximumSize">
-           <size>
-            <width>16777215</width>
-            <height>100</height>
-           </size>
+         <widget class="QComboBox" name="boxCatalog"/>
+        </item>
+        <item>
+         <widget class="QPushButton" name="boxOpen">
+          <property name="text">
+           <string>Buka</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="boxSave">
+          <property name="text">
+           <string>Ekspor...</string>
           </property>
          </widget>
         </item>
@@ -206,6 +227,11 @@
   <action name="actionExpor_DB">
    <property name="text">
     <string>Expor DB</string>
+   </property>
+  </action>
+  <action name="actionKatalog">
+   <property name="text">
+    <string>Edit Katalog</string>
    </property>
   </action>
  </widget>

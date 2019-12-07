@@ -1,24 +1,32 @@
 from PyQt5 import QtWidgets, QtGui, uic
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QFileDialog, QTableWidgetItem
+from PyQt5.QtSql import QSqlTableModel
 from datetime import datetime
-import utils, os
+from . import utils
+
 
 class ImportDialog(QtWidgets.QDialog):
     def __init__(self, parent):
         super(ImportDialog, self).__init__(parent)
-        uic.loadUi('importView.ui', self)
+        uic.loadUi('src/importView.ui', self)
         self.thumbTicket = 0
         self.listing.setColumnHidden(5, True)
         self.listing.setColumnHidden(6, True)
-        self.listing.selectionModel().selectionChanged.connect(lambda _,__: self.updatePreview())
-        self.listing.setItemDelegateForColumn(4, utils.NonEditableDelegate(self))
-        self.listing.setItemDelegateForColumn(2, utils.DateEditDelegate(self))
+        self.listing.selectionModel().selectionChanged.connect(
+            lambda _, __: self.updatePreview())
+        self.listing.setItemDelegateForColumn(
+            4, utils.NonEditableDelegate(self))
+        self.listing.setItemDelegateForColumn(
+            2, utils.DateEditDelegate(self))
         self.openBtn.clicked.connect(self.openAction)
         self.openBtn.dragEnterEvent = self.dragEnterFileEvent
         self.openBtn.dropEvent = self.dropFileEvent
         self.buttonBox.accepted.connect(self.importAction)
-
+        self.katalogmodel = QSqlTableModel(self)
+        self.katalogmodel.setTable('catalogs')
+        self.katalogmodel.select()
+        self.boxCatalog.setModel(self.katalogmodel)
 
     def openAction(self):
         filePath = QFileDialog.getOpenFileNames(self, 'OpenFile')[0]
@@ -27,26 +35,26 @@ class ImportDialog(QtWidgets.QDialog):
     def addPath(self, filePath):
         self.thumbTicket += 1
         fileName = utils.getFileName(filePath)
-        fileThumb = utils.retrieveTempThumb(filePath, "import_%d" % self.thumbTicket)
+        fileThumb = utils.retrieveTempThumb(
+            filePath, "import_%d" % self.thumbTicket)
         date = datetime.strftime(utils.getModifiedDate(filePath), '%Y-%m-%d')
         title = utils.getFileNameNoExt(filePath)
         index = ""
         category = ""
-        items = [index, title, str(date), category, fileName, filePath, fileThumb]
+        items = [index, title, str(date), category,
+                 fileName, filePath, fileThumb]
         row = self.listing.rowCount()
         self.listing.insertRow(row)
         for i, item in enumerate(items):
             self.listing.setItem(row, i, QTableWidgetItem(item))
-
 
     def updatePreview(self):
         rows = self.listing.selectedItems()
         if (len(rows) > 0):
             selectedIndex = self.listing.item(rows[0].row(), 0).text()
             selectedTitle = self.listing.item(rows[0].row(), 1).text()
-            selectedDate = datetime.strptime(self.listing.item(rows[0].row(), 2).text(), '%Y-%m-%d')
-            # selectedCategory = self.listing.item(rows[0].row(), 3).text()
-            # selectedPath = self.listing.item(rows[0].row(), 5).text()
+            selectedDate = datetime.strptime(self.listing.item(
+                rows[0].row(), 2).text(), '%Y-%m-%d')
             selectedThumb = self.listing.item(rows[0].row(), 6).text()
 
             self.fileLabel.setPixmap(QtGui.QPixmap(selectedThumb))
