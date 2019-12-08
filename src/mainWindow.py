@@ -7,6 +7,7 @@ import os
 from . import utils, worker
 from .importDialog import ImportDialog
 from .catalogDialog import CatalogDialog
+from .searchDialog import SearchDialog
 from datetime import datetime
 
 
@@ -16,9 +17,11 @@ class MainWindow(QMainWindow):
         uic.loadUi('src/mainView.ui', self)
         self.selectedDoc = ''
         self.mute = False
+        self.searchWorker = worker.SearchWorker()
         self.openDB()
         self.updateListing()
         self.addBtn.clicked.connect(self.importAction)
+        self.lookupBtn.clicked.connect(self.lookupAction)
         self.delBtn.clicked.connect(self.deleteAction)
         self.listing.selectionModel().selectionChanged.connect(
             lambda _, __: self.updatePreview())
@@ -69,9 +72,8 @@ class MainWindow(QMainWindow):
             self.katalogmodel.setTable('catalogs')
             self.boxCatalog.setModel(self.katalogmodel)
 
-        f = self.searchBox.text()
-        f = worker.searchWorker(f)
-        self.model.setFilter(f)
+        self.searchWorker.parse(self.searchBox.text())
+        self.model.setFilter(self.searchWorker.buildQuery())
         self.katalogmodel.select()
         self.model.select()
 
@@ -140,6 +142,10 @@ class MainWindow(QMainWindow):
 
     def importAction(self):
         ImportDialog(self).exec()
+        self.updateListing()
+
+    def lookupAction(self):
+        SearchDialog(self, self.searchWorker).exec()
         self.updateListing()
 
     def katalogAction(self):

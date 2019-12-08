@@ -1,11 +1,12 @@
 import threading
 import subprocess
+import shlex
 from . import utils
 from PyQt5.QtSql import QSqlQuery
 from shutil import copyfile
 
 
-class documentImporter(threading.Thread):
+class DocumentImporter(threading.Thread):
     def __init__(self):
         threading.Thread.__init__(self)
 
@@ -34,30 +35,57 @@ class documentImporter(threading.Thread):
         self.start()
 
 
-def escapeLike(word=""):
-    return word.replace("%", "%%").replace('\\', '\\\\').replace('"', '\\"')
+class SearchWorker():
+    def __init__(self):
+        self.commons = []
+        self.index = None
+        self.title = None
+        self.catalog = None
+        self.range = None
 
+    def escapeLike(self, word=""):
+        return (word.replace("%", "%%").replace('\\', '\\\\')
+                    .replace('"', '\\"'))
 
-def translateKeyword(word=''):
-    if ":" in word:
-        key, value = word.split(':', 2)
-        if key == 'index':
-            return f'`index` LIKE "%{escapeLike(value)}%"'
-        elif key == 'title':
-            return f'`title` LIKE "%{escapeLike(value)}%"'
-        elif key == 'catalog':
-            return f'`catalog` = "{escapeLike(value)}"'
-        elif key == 'range':
-            start, end = value.split(':', 2)
-            return (f'`date` BETWEEN "{escapeLike(start)}"'
-                    f' AND "{escapeLike(end)}"')
-    e = escapeLike(word)
-    return (f'(`index` LIKE "%{e}%" OR `title` '
-            f'LIKE "%{e}%" OR `catalog` LIKE "%{e}%")')
+    def allocateWord(self, word=''):
+        if ":" in word:
+            key, value = word.split(':', 2)
+            if key == 'index':
+                self.index = value
+            elif key == 'title':
+                self.title = value
+            elif key == 'catalog':
+                self.catalog = value
+            elif key == 'range':
+                start, end = value.split(':', 2)
+                self.range = (start, end)
+        else:
+            self.commons.append(word)
 
+    def buildQuery(self):
+        result = []
+        if len(self.commons) > 0:
+            for word in self.commons:
+                e = self.escapeLike(word)
+                result.append(f'(`index` LIKE "%{e}%" OR `title` '
+                              f'LIKE "%{e}%" OR `catalog` LIKE "%{e}%")')
+        if self.index:
+            result.append(f'`index` LIKE "%{self.escapeLike(self.index)}%"')
+        if self.title:
+            result.append(f'`title` LIKE "%{self.escapeLike(self.title)}%"')
+        if self.catalog is not None:
+            result.append(f'`catalog` = "{self.escapeLike(self.catalog)}"')
+        if self.range is not None:
+            start, end = self.range
+            result.append(f'`date` BETWEEN "{self.escapeLike(start)}"'
+                          f' AND "{self.escapeLike(end)}"')
+        return None if len(result) == 0 else ' AND '.join(result)
 
-def searchWorker(query=''):
-    if query == '':
-        return None
-    outs = [translateKeyword(word) for word in query.split()]
-    return " AND ".join(outs)
+    def parse(self, query=''):
+        SearchWorker.__init__(self)
+        if query == '':
+            return
+        try:
+            [self.allocateWord(word) for word in shlex.split(query)]
+        except Exception:
+            return

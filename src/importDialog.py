@@ -26,6 +26,7 @@ class ImportDialog(QtWidgets.QDialog):
         self.openBtn.clicked.connect(self.openAction)
         self.openBtn.dragEnterEvent = self.dragEnterFileEvent
         self.openBtn.dropEvent = self.dropFileEvent
+        self.delBtn.clicked.connect(self.deleteAction)
         self.buttonBox.accepted.connect(self.importAction)
         self.katalogmodel = QSqlTableModel(self)
         self.katalogmodel.setTable('catalogs')
@@ -110,3 +111,9 @@ class ImportDialog(QtWidgets.QDialog):
             datasheet[3] = self.boxCatalog.currentText()
             [self.listing.item(rows[0].row(), x)
                          .setText(datasheet[x]) for x in range(6)]
+
+    def deleteAction(self):
+        rows = [x.row() for x in self.listing.selectedItems()]
+        rows = reversed(list(set(rows)))
+        for r in rows:
+            self.listing.removeRow(r)

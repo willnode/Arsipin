@@ -81,3 +81,10 @@ class CatalogEditDelegate(QItemDelegate):
 
     def updateEditorGeometry(self, editor, option, index):
         editor.setGeometry(option.rect)
+
+
+def populateCatalog(comboBox):
+    model = QSqlTableModel(comboBox.parent())
+    model.setTable('catalogs')
+    model.select()
+    comboBox.setModel(model)
