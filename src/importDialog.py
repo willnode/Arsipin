@@ -11,6 +11,7 @@ class ImportDialog(QtWidgets.QDialog):
         super(ImportDialog, self).__init__(parent)
         uic.loadUi('src/importView.ui', self)
         self.thumbTicket = 0
+        self.mute = 0
         self.listing.setColumnHidden(5, True)
         self.listing.setColumnHidden(6, True)
         self.listing.selectionModel().selectionChanged.connect(
@@ -62,14 +63,18 @@ class ImportDialog(QtWidgets.QDialog):
                          .text() for x in range(6)]
             index, title, date, catalog, path, thumb = datasheet
             date = datetime.strptime(date, '%Y-%m-%d')
-
+            self.mute += 1
             self.fileLabel.setPixmap(QtGui.QPixmap(thumb))
-            self.boxTitle.setText(title)
-            self.boxIndex.setText(index)
-            self.boxDate.setDate(date)
+            if not self.boxTitle.hasFocus():
+                self.boxTitle.setText(title)
+            if not self.boxIndex.hasFocus():
+                self.boxIndex.setText(index)
+            if not self.boxDate.hasFocus():
+                self.boxDate.setDate(date)
             i = self.boxCatalog.findText(catalog)
             if i >= 0:
                 self.boxCatalog.setCurrentIndex(i)
+            self.mute -= 1
 
     def importAction(self):
         for row in range(self.listing.rowCount()):
@@ -95,7 +100,7 @@ class ImportDialog(QtWidgets.QDialog):
 
     def updateFromBox(self):
         rows = self.listing.selectedItems()
-        if (len(rows) > 0):
+        if (len(rows) > 0 and self.mute == 0):
             datasheet = [self.listing.item(rows[0].row(), x)
                          .text() for x in range(6)]
             datasheet[0] = self.boxIndex.text()

@@ -4,7 +4,7 @@ from PyQt5.QtGui import QPixmap
 from PyQt5.QtSql import QSqlDatabase, QSqlTableModel
 from PyQt5.QtWidgets import QMessageBox, QMainWindow
 import os
-from . import utils
+from . import utils, worker
 from .importDialog import ImportDialog
 from .catalogDialog import CatalogDialog
 from datetime import datetime
@@ -55,7 +55,6 @@ class MainWindow(QMainWindow):
             self.model = QSqlTableModel(self)
             self.model.setTable('documents')
             self.listing.setModel(self.model)
-            #QSqlTableModel.dataChanged
             self.model.dataChanged.connect(lambda x, y: self.updatePreview())
             self.listing.setItemDelegateForColumn(
                 0, utils.NonEditableDelegate(self))
@@ -71,8 +70,8 @@ class MainWindow(QMainWindow):
             self.boxCatalog.setModel(self.katalogmodel)
 
         f = self.searchBox.text()
-        self.model.setFilter(None if f == '' else f'`index` LIKE "%{f}%" '
-                             f'OR `title` LIKE "%{f}%"')
+        f = worker.searchWorker(f)
+        self.model.setFilter(f)
         self.katalogmodel.select()
         self.model.select()
 
@@ -93,12 +92,17 @@ class MainWindow(QMainWindow):
             if i >= 0:
                 self.boxCatalog.setCurrentIndex(i)
             self.mute = False
-            self.boxPreview.setPixmap(self.selectedThumb.scaled(
-                self.boxPreview.width(), self.boxPreview.height(),
-                Qt.KeepAspectRatio, Qt.SmoothTransformation))
+            if not self.selectedThumb.isNull():
+                self.boxPreview.setPixmap(self.selectedThumb.scaled(
+                    self.boxPreview.width(), self.boxPreview.height(),
+                    Qt.KeepAspectRatio, Qt.SmoothTransformation))
+            else:
+                self.boxPreview.setPixmap(self.selectedThumb)
 
     def updateFromBox(self):
-        if (self.mute): return
+        if self.mute:
+            return
+        print('ref')
         rows = self.listing.selectionModel().selectedRows()
         if (len(rows) == 1):
             datasheet = [self.model.data(self.model.index(
